@@ -167,11 +167,20 @@ def compute_meta_gradients(model, dataloader):
                 test_logit = model(test_input, params=params)
                 outer_loss = F.cross_entropy(test_logit, test_target)
                 outer_loss.backward()
-                with torch.no_grad():
-                    curr_params = list(model.parameters())[-2:]
-                    curr_grads = [param.grad.data for param in curr_params]
-                curr_grads = flatten_params(curr_grads)
-                print()
+                if cnt == 0:
+                    with torch.no_grad():
+                        curr_params = list(model.parameters())[-2:]
+                        curr_grads = [param.grad.data for param in curr_params]
+                        curr_grads = flatten_params(curr_grads)
+                    per_elem_grads = curr_grads.view(1, -1)
+                    cnt = 1
+                else:
+                    with torch.no_grad():
+                        curr_params = list(model.parameters())[-2:]
+                        curr_grads = [param.grad.data for param in curr_params]
+                        curr_grads = flatten_params(curr_grads)
+                    per_elem_grads = torch.cat([per_elem_grads, curr_grads.view(1, -1)], dim=0)
+        print()
 
 
 def train(args):
