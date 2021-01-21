@@ -37,4 +37,6 @@ from .shufflenetv2 import ShuffleNetV2
 from .simpleNN_net import TwoLayerNet
 from .simpleNN_net import ThreeLayerNet
 from .vgg import VGG
-
+from .maml_model import MAMLNetwork
+from .maml_model import MiniImagenetNetwork
+from .maml_model import FrozenMiniImagenetNetwork
