@@ -102,7 +102,8 @@ class FrozenMiniImagenetNetwork(MetaModule):
         self.classifier = MetaLinear(self.embedding_size, out_features)
 
     def forward(self, inputs, params=None):
-        features = self.features(inputs)
-        features = features.view((features.size(0), -1))
+        with torch.no_grad():
+            features = self.features(inputs)
+            features = features.view((features.size(0), -1))
         logits = self.classifier(features, params=self.get_subdict(params, 'classifier'))
         return logits
