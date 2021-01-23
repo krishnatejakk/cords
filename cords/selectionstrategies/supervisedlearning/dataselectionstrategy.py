@@ -96,7 +96,7 @@ class DataSelectionStrategy(object):
                             outputs.scatter_(1, targets.view(-1, 1), 1)
                             l0_grads = data - outputs
                         elif self.loss_type == 'SquaredLoss':
-                            data = 2 * (out - targets)
+                            data = 2 * (out - targets.view(out.shape[0], -1))
                             l0_grads = data
                         if self.linear_layer:
                             l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
@@ -114,7 +114,7 @@ class DataSelectionStrategy(object):
                             outputs.scatter_(1, targets.view(-1, 1), 1)
                             batch_l0_grads = data - outputs
                         elif self.loss_type == 'SquaredLoss':
-                            data = 2 * (out - targets)
+                            data = 2 * (out - targets.view(out.shape[0], -1))
                             batch_l0_grads = data
                         if self.linear_layer:
                             batch_l0_expand = torch.repeat_interleave(batch_l0_grads, embDim, dim=1)
@@ -146,7 +146,7 @@ class DataSelectionStrategy(object):
                                 outputs.scatter_(1, targets.view(-1, 1), 1)
                                 l0_grads = data - outputs
                             elif self.loss_type == 'SquaredLoss':
-                                data = 2 * (out - targets)
+                                data = 2 * (out - targets.view(out.shape[0], -1))
                                 l0_grads = data
                             if self.linear_layer:
                                 l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
@@ -164,7 +164,7 @@ class DataSelectionStrategy(object):
                                 outputs.scatter_(1, targets.view(-1, 1), 1)
                                 batch_l0_grads = data - outputs
                             elif self.loss_type == 'SquaredLoss':
-                                data = 2 * (out - targets)
+                                data = 2 * (out - targets.view(out.shape[0], -1))
                                 batch_l0_grads = data
 
                             if self.linear_layer:
@@ -196,7 +196,7 @@ class DataSelectionStrategy(object):
                             outputs.scatter_(1, targets.view(-1, 1), 1)
                             l0_grads = data - outputs
                         elif self.loss_type == 'SquaredLoss':
-                            data = 2 * (out - targets)
+                            data = 2 * (out - targets.view(out.shape[0], -1))
                             l0_grads = data
 
                         if self.linear_layer:
@@ -215,7 +215,7 @@ class DataSelectionStrategy(object):
                             outputs.scatter_(1, targets.view(-1, 1), 1)
                             batch_l0_grads = data - outputs
                         elif self.loss_type == 'SquaredLoss':
-                            data = 2 * (out - targets)
+                            data = 2 * (out - targets.view(out.shape[0], -1))
                             batch_l0_grads = data
                         if self.linear_layer:
                             batch_l0_expand = torch.repeat_interleave(batch_l0_grads, embDim, dim=1)
@@ -247,7 +247,7 @@ class DataSelectionStrategy(object):
                                 outputs.scatter_(1, targets.view(-1, 1), 1)
                                 l0_grads = data - outputs
                             elif self.loss_type == 'SquaredLoss':
-                                data = 2 * (out - targets)
+                                data = 2 * (out - targets.view(out.shape[0], -1))
                                 l0_grads = data
                             if self.linear_layer:
                                 l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
@@ -265,7 +265,7 @@ class DataSelectionStrategy(object):
                                 outputs.scatter_(1, targets.view(-1, 1), 1)
                                 batch_l0_grads = data - outputs
                             elif self.loss_type == 'SquaredLoss':
-                                data = 2 * (out - targets)
+                                data = 2 * (out - targets.view(out.shape[0], -1))
                                 batch_l0_grads = data
 
                             if self.linear_layer:

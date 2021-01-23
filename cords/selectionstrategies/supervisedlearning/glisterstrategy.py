@@ -112,7 +112,7 @@ class GLISTERStrategy(DataSelectionStrategy):
                             outputs.scatter_(1, targets.view(-1, 1), 1)
                             l0_grads = data - outputs
                         elif self.loss_type == 'SquaredLoss':
-                            data = 2 * (out - targets)
+                            data = 2 * (out - targets.view(out.shape[0], -1))
                             l0_grads = data
 
                         if self.linear_layer:
@@ -130,7 +130,7 @@ class GLISTERStrategy(DataSelectionStrategy):
                             outputs.scatter_(1, targets.view(-1, 1), 1)
                             batch_l0_grads = data - outputs
                         elif self.loss_type == 'SquaredLoss':
-                            data = 2 * (out - targets)
+                            data = 2 * (out - targets.view(out.shape[0], -1))
                             batch_l0_grads = data
                         l0_grads = torch.cat((l0_grads, batch_l0_grads), dim=0)
                         if self.linear_layer:
