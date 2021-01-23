@@ -51,7 +51,7 @@ class GLISTERStrategy(DataSelectionStrategy):
         Loading the validation data using pytorch DataLoader
     model: class
         Model architecture used for training
-    loss_type: class
+    loss_type: str
         The type of loss criterion
     eta: float
         Learning rate. Step size for the one step gradient update
@@ -75,9 +75,8 @@ class GLISTERStrategy(DataSelectionStrategy):
         """
         Constructor method
         """
-        
-        super().__init__(trainloader, valloader, model, num_classes, linear_layer)
-        self.loss_type = loss_type
+
+        super().__init__(trainloader, valloader, model, loss_type, num_classes, linear_layer)
         self.eta = eta  # step size for the one step gradient update
         self.device = device
         self.init_out = list()
@@ -85,11 +84,10 @@ class GLISTERStrategy(DataSelectionStrategy):
         self.selection_type = selection_type
         self.r = r
 
-
     def _update_grads_val(self, grads_currX=None, first_init=False):
         """
         Update the gradient values
-        
+
         Parameters
         ----------
         grad_currX: OrderedDict, optional
@@ -107,44 +105,60 @@ class GLISTERStrategy(DataSelectionStrategy):
                 if batch_idx == 0:
                     with torch.no_grad():
                         out, l1 = self.model(inputs, last=True)
-                        data = F.softmax(out, dim=1)
-                    #Gradient Calculation Part
-                    outputs = torch.zeros(len(inputs), self.num_classes).to(self.device)
-                    outputs.scatter_(1, targets.view(-1, 1), 1)
-                    l0_grads = data - outputs
-                    if self.linear_layer:
-                        l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
-                        l1_grads = l0_expand * l1.repeat(1, self.num_classes)
+                        if self.loss_type == 'CrossEntropyLoss':
+                            data = F.softmax(out, dim=1)
+                            # Gradient Calculation Part
+                            outputs = torch.zeros(len(inputs), self.num_classes).to(self.device)
+                            outputs.scatter_(1, targets.view(-1, 1), 1)
+                            l0_grads = data - outputs
+                        elif self.loss_type == 'SquaredLoss':
+                            data = 2 * (out - targets)
+                            l0_grads = data
+
+                        if self.linear_layer:
+                            l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
+                            l1_grads = l0_expand * l1.repeat(1, self.num_classes)
                     self.init_out = out
                     self.init_l1 = l1
-                    self.y_val = targets.view(-1, 1)
+                    self.y_val = targets.view(out.shape[0], -1)
                 else:
                     with torch.no_grad():
                         out, l1 = self.model(inputs, last=True)
-                        data = F.softmax(out, dim=1)
-                    outputs = torch.zeros(len(inputs), self.num_classes).to(self.device)
-                    outputs.scatter_(1, targets.view(-1, 1), 1)
-                    batch_l0_grads = data - outputs
-                    l0_grads = torch.cat((l0_grads, batch_l0_grads), dim=0)
-                    if self.linear_layer:
-                        batch_l0_expand = torch.repeat_interleave(batch_l0_grads, embDim, dim=1)
-                        batch_l1_grads = batch_l0_expand * l1.repeat(1, self.num_classes)
-                        l1_grads = torch.cat((l1_grads, batch_l1_grads), dim=0)
+                        if self.loss_type == 'CrossEntropyLoss':
+                            data = F.softmax(out, dim=1)
+                            outputs = torch.zeros(len(inputs), self.num_classes).to(self.device)
+                            outputs.scatter_(1, targets.view(-1, 1), 1)
+                            batch_l0_grads = data - outputs
+                        elif self.loss_type == 'SquaredLoss':
+                            data = 2 * (out - targets)
+                            batch_l0_grads = data
+                        l0_grads = torch.cat((l0_grads, batch_l0_grads), dim=0)
+                        if self.linear_layer:
+                            batch_l0_expand = torch.repeat_interleave(batch_l0_grads, embDim, dim=1)
+                            batch_l1_grads = batch_l0_expand * l1.repeat(1, self.num_classes)
+                            l1_grads = torch.cat((l1_grads, batch_l1_grads), dim=0)
                     self.init_out = torch.cat((self.init_out, out), dim=0)
                     self.init_l1 = torch.cat((self.init_l1, l1), dim=0)
-                    self.y_val = torch.cat((self.y_val, targets.view(-1, 1)), dim=0)
+                    self.y_val = torch.cat((self.y_val, targets.view(out.shape[0], -1)), dim=0)
 
         elif grads_currX is not None:
             with torch.no_grad():
-                out_vec = self.init_out - (self.eta * grads_currX[0][0:self.num_classes].view(1, -1).expand(self.init_out.shape[0], -1))
+
+                out_vec = self.init_out - (
+                            self.eta * grads_currX[0][0:self.num_classes].view(1, -1).expand(self.init_out.shape[0],
+                                                                                             -1))
 
                 if self.linear_layer:
-                    out_vec = out_vec - (self.eta * torch.matmul(self.init_l1, grads_currX[0][self.num_classes:].view(self.num_classes, -1).transpose(0, 1)))
+                    out_vec = out_vec - (self.eta * torch.matmul(self.init_l1, grads_currX[0][self.num_classes:].view(
+                        self.num_classes, -1).transpose(0, 1)))
 
-                scores = F.softmax(out_vec, dim=1)
-                one_hot_label = torch.zeros(len(self.y_val), self.num_classes).to(self.device)
-                one_hot_label.scatter_(1, self.y_val.view(-1, 1), 1)
-                l0_grads = scores - one_hot_label
+                if self.loss_type == 'CrossEntropyLoss':
+                    scores = F.softmax(out_vec, dim=1)
+                    one_hot_label = torch.zeros(len(self.y_val), self.num_classes).to(self.device)
+                    one_hot_label.scatter_(1, self.y_val.view(-1, 1), 1)
+                    l0_grads = scores - one_hot_label
+                elif self.loss_type == 'SquaredLoss':
+                    l0_grads = 2*(out_vec - self.y_val)
                 if self.linear_layer:
                     l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
                     l1_grads = l0_expand * self.init_l1.repeat(1, self.num_classes)
@@ -158,12 +172,12 @@ class GLISTERStrategy(DataSelectionStrategy):
     def eval_taylor_modular(self, grads):
         """
         Evaluate gradients
-        
+
         Parameters
         ----------
         grads: Tensor
             Gradients
-        
+
         Returns
         ----------
         gains: Tensor
@@ -174,7 +188,6 @@ class GLISTERStrategy(DataSelectionStrategy):
         with torch.no_grad():
             gains = torch.matmul(grads, grads_val)
         return gains
-
 
     def _update_gradients_subset(self, grads_X, element):
         """
@@ -188,13 +201,12 @@ class GLISTERStrategy(DataSelectionStrategy):
         element: int
             Element that need to be added to the gradients
         """
-        
-        #if isinstance(element, list):
+
+        # if isinstance(element, list):
         grads_X += self.grads_per_elem[element].sum(dim=0)
-        #else:
+        # else:
         #    grads_X += self.grads_per_elem[element]
 
-    
     def select(self, budget, model_params):
         """
         Apply naive greedy method for data selection
@@ -205,15 +217,15 @@ class GLISTERStrategy(DataSelectionStrategy):
             The number of data points to be selected
         model_params: OrderedDict
             Python dictionary object containing models parameters
-        
+
         Returns
         ----------
         greedySet: list
-            List containing indices of the best datapoints, 
+            List containing indices of the best datapoints,
         budget: Tensor
             Tensor containing gradients of datapoints present in greedySet
         """
-        
+
         self.update_model(model_params)
         start_time = time.time()
         self.compute_gradients()
@@ -227,12 +239,10 @@ class GLISTERStrategy(DataSelectionStrategy):
         self.numSelected = 0
         greedySet = list()
         remainSet = list(range(self.N_trn))
-
-
-        #RModular Greedy Selection Algorithm
+        # RModular Greedy Selection Algorithm
         if self.selection_type == 'RGreedy':
             t_ng_start = time.time()  # naive greedy start time
-            #subset_size = int((len(self.grads_per_elem) / r))
+            # subset_size = int((len(self.grads_per_elem) / r))
             selection_size = int(budget / self.r)
             while (self.numSelected < budget):
                 # Try Using a List comprehension here!
@@ -256,7 +266,7 @@ class GLISTERStrategy(DataSelectionStrategy):
                 self.numSelected += selection_size
             print("R greedy total time:", time.time() - t_ng_start)
 
-        #Stochastic Greedy Selection Algorithm
+        # Stochastic Greedy Selection Algorithm
         elif self.selection_type == 'Stochastic':
             t_ng_start = time.time()  # naive greedy start time
             subset_size = int((len(self.grads_per_elem) / budget) * math.log(100))
@@ -292,7 +302,7 @@ class GLISTERStrategy(DataSelectionStrategy):
                 rem_grads = self.grads_per_elem[remainSet]
                 gains = self.eval_taylor_modular(rem_grads)
                 # Update the greedy set and remaining set
-                #_, maxid = torch.max(gains, dim=0)
+                # _, maxid = torch.max(gains, dim=0)
                 _, indices = torch.sort(gains.view(-1), descending=True)
                 bestId = [remainSet[indices[0].item()]]
                 greedySet.append(bestId[0])

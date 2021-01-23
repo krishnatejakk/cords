@@ -211,11 +211,11 @@ def train(args):
     custom_sampler = CustomSequentialSampler(dataset, batches)
     dataloader = BatchMetaDataLoader(dataset,
                                      batch_size=args.batch_size,
-                                     shuffle=False,
-                                     sampler=custom_sampler,
+                                     shuffle=True,
+                                     #sampler=custom_sampler,
                                      num_workers=args.num_workers)
 
-    compute_meta_gradients(model1, dataloader)
+    #compute_meta_gradients(model1, dataloader)
     # Training loop
     with tqdm(dataloader, total=args.num_batches) as pbar:
         for batch_idx, batch in enumerate(pbar):

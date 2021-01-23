@@ -43,19 +43,16 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
         Constructer method
         """
 
-        super().__init__(trainloader, valloader, model, num_classes, linear_layer)
-
-        self.loss_type = loss_type  # Make sure it has reduction='none' instead of default
+        super().__init__(trainloader, valloader, model, loss_type, num_classes, linear_layer)
         self.device = device
         self.if_convex = if_convex
         self.selection_type = selection_type
         self.submod_func_type = submod_func_type
 
-
     def distance(self, x, y, exp=2):
         """
         Compute the distance.
- 
+
         Parameters
         ----------
         x: Tensor
@@ -64,11 +61,11 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
             Second input tensor
         exp: float, optional
             The exponent value (default: 2)
-            
+
         Returns
         ----------
         dist: Tensor
-            Output tensor 
+            Output tensor
         """
 
         n = x.size(0)
@@ -77,9 +74,8 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
         x = x.unsqueeze(1).expand(n, m, d)
         y = y.unsqueeze(0).expand(n, m, d)
         dist = torch.pow(x - y, exp).sum(2)
-        #dist = torch.exp(-1 * torch.pow(x - y, 2).sum(2))
+        # dist = torch.exp(-1 * torch.pow(x - y, 2).sum(2))
         return dist
-
 
     def compute_score(self, model_params, idxs):
         """
@@ -95,8 +91,8 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
 
         trainset = self.trainloader.sampler.data_source
         subset_loader = torch.utils.data.DataLoader(trainset, batch_size=self.trainloader.batch_size, shuffle=False,
-                                                   sampler=SubsetRandomSampler(idxs),
-                                                   pin_memory=True)
+                                                    sampler=SubsetRandomSampler(idxs),
+                                                    pin_memory=True)
         self.model.load_state_dict(model_params)
         self.N = 0
         g_is = []
@@ -124,7 +120,7 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
                         g_is.append(torch.cat((l0_grads, l1_grads), dim=1))
                     else:
                         g_is.append(l0_grads)
-                        
+
             self.dist_mat = torch.zeros([self.N, self.N], dtype=torch.float32)
             first_i = True
             for i, g_i in enumerate(g_is, 0):
@@ -137,7 +133,6 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
         self.const = torch.max(self.dist_mat).item()
         self.dist_mat = (self.const - self.dist_mat).numpy()
 
-
     def compute_gamma(self, idxs):
         """
         Compute the gamma values for the indices.
@@ -146,11 +141,11 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
         ----------
         idxs: list
             The indices
-        
+
         Returns
         ----------
         gamma: list
-            Gradient values of the input indices 
+            Gradient values of the input indices
         """
 
         if self.selection_type == 'PerClass':
@@ -166,7 +161,6 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
             for i in range(rep.shape[1]):
                 gamma[rep[0, i]] += 1
         return gamma
-
 
     def get_similarity_kernel(self):
         """
@@ -192,12 +186,11 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
                 kernel[i, x] = 1
         return kernel
 
-
     def select(self, budget, model_params, optimizer):
         """
         Data selection method using different submodular optimization
         functions.
- 
+
         Parameters
         ----------
         budget: int
@@ -208,11 +201,11 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
             The optimization approach for data selection. Must be one of
             'random', 'modular', 'naive', 'lazy', 'approximate-lazy', 'two-stage',
             'stochastic', 'sample', 'greedi', 'bidirectional'
-        
+
         Returns
         ----------
         total_greedy_list: list
-            List containing indices of the best datapoints 
+            List containing indices of the best datapoints
         gammas: list
             List containing gradients of datapoints present in greedySet
         """
@@ -230,22 +223,27 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
             for i in range(self.num_classes):
                 idxs = torch.where(labels == i)[0]
                 self.compute_score(model_params, idxs)
-                if self.submod_func_type == 'facility-location':                    
-                    fl = apricot.functions.facilityLocation.FacilityLocationSelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                if self.submod_func_type == 'facility-location':
+                    fl = apricot.functions.facilityLocation.FacilityLocationSelection(random_state=0,
+                                                                                      metric='precomputed',
+                                                                                      n_samples=per_class_bud,
+                                                                                      optimizer=optimizer)
                 elif self.submod_func_type == 'graph-cut':
                     fl = apricot.functions.graphCut.GraphCutSelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                                                                      n_samples=per_class_bud, optimizer=optimizer)
                 elif self.submod_func_type == 'sum-redundancy':
                     fl = apricot.functions.sumRedundancy.SumRedundancySelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                                                                                n_samples=per_class_bud,
+                                                                                optimizer=optimizer)
                 elif self.submod_func_type == 'saturated-coverage':
-                    fl = apricot.functions.saturatedCoverage.SaturatedCoverageSelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
-                
+                    fl = apricot.functions.saturatedCoverage.SaturatedCoverageSelection(random_state=0,
+                                                                                        metric='precomputed',
+                                                                                        n_samples=per_class_bud,
+                                                                                        optimizer=optimizer)
+
                 sim_sub = fl.fit_transform(self.dist_mat)
                 greedyList = list(np.argmax(sim_sub, axis=1))
-                gamma = self.compute_gamma(greedyList)                    
+                gamma = self.compute_gamma(greedyList)
                 total_greedy_list.extend(idxs[greedyList])
                 gammas.extend(gamma)
 
@@ -266,19 +264,23 @@ class SubmodularSelectionStrategy(DataSelectionStrategy):
                     col = torch.cat((col, idxs.repeat(N)), dim=0)
                     data = np.concatenate([data, self.dist_mat.flatten()], axis=0)
             sparse_simmat = csr_matrix((data, (row.numpy(), col.numpy())), shape=(self.N_trn, self.N_trn))
-            self.dist_mat = sparse_simmat            
+            self.dist_mat = sparse_simmat
             if self.submod_func_type == 'facility-location':
                 fl = apricot.functions.facilityLocation.FacilityLocationSelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                                                                                  n_samples=per_class_bud,
+                                                                                  optimizer=optimizer)
             elif self.submod_func_type == 'graph-cut':
                 fl = apricot.functions.graphCut.GraphCutSelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                                                                  n_samples=per_class_bud, optimizer=optimizer)
             elif self.submod_func_type == 'sum-redundancy':
                 fl = apricot.functions.sumRedundancy.SumRedundancySelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                                                                            n_samples=per_class_bud,
+                                                                            optimizer=optimizer)
             elif self.submod_func_type == 'saturated-coverage':
-                fl = apricot.functions.saturatedCoverage.SaturatedCoverageSelection(random_state=0, metric='precomputed',
-                                                                              n_samples=per_class_bud, optimizer=optimizer)
+                fl = apricot.functions.saturatedCoverage.SaturatedCoverageSelection(random_state=0,
+                                                                                    metric='precomputed',
+                                                                                    n_samples=per_class_bud,
+                                                                                    optimizer=optimizer)
 
             sim_sub = fl.fit_transform(sparse_simmat)
             total_greedy_list = list(np.array(np.argmax(sim_sub, axis=1)).reshape(-1))
