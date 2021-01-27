@@ -1230,3 +1230,58 @@ def load_dataset_custom(datadir, dset_name, feature, isnumpy=False):
                     subset_idxs.extend(batch_subset_idxs)
             trainset = torch.utils.data.Subset(trainset, subset_idxs)
         return trainset, valset, testset, num_cls
+
+    elif dset_name == "imagenet":
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+
+        train_transforms = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+            ])
+
+        val_transforms = transforms.Compose([transforms.Resize(256),
+                        transforms.CenterCrop(224),
+                        transforms.ToTensor(),
+                        normalize,])
+
+        trainset = torchvision.datasets.ImageNet(root="../../../../Datasets/data/imagenet",
+                                                 split='train',
+                                                 transform=train_transforms)
+
+        valset = torchvision.datasets.ImageNet(root="../../../../Datasets/data/imagenet",
+                                                 split='val',
+                                                 transform=val_transforms)
+
+        testset = torchvision.datasets.ImageNet(root="../../../../Datasets/data/imagenet",
+                                               split='val',
+                                               transform=val_transforms)
+
+        num_cls = 1000
+
+        if feature == 'classimb':
+            samples_per_class = torch.zeros(num_cls)
+            for i in range(num_cls):
+                samples_per_class[i] = len(torch.where(trainset.identity == i)[0])
+            min_samples = int(torch.min(samples_per_class) * 0.1)
+            selected_classes = np.random.choice(np.arange(num_cls), size=int(0.3 * num_cls), replace=False)
+            for i in range(num_cls):
+                if i == 0:
+                    if i in selected_classes:
+                        subset_idxs = list(
+                            np.random.choice(torch.where(trainset.identity == i)[0].cpu().numpy(), size=min_samples,
+                                             replace=False))
+                    else:
+                        subset_idxs = list(torch.where(trainset.identity == i)[0].cpu().numpy())
+                else:
+                    if i in selected_classes:
+                        batch_subset_idxs = list(
+                            np.random.choice(torch.where(trainset.identity == i)[0].cpu().numpy(), size=min_samples,
+                                             replace=False))
+                    else:
+                        batch_subset_idxs = list(torch.where(trainset.identity == i)[0].cpu().numpy())
+                    subset_idxs.extend(batch_subset_idxs)
+            trainset = torch.utils.data.Subset(trainset, subset_idxs)
+        return trainset, valset, testset, num_cls
