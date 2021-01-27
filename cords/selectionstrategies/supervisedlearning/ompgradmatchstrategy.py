@@ -58,7 +58,8 @@ class OMPGradMatchStrategy(DataSelectionStrategy):
         """
         Constructor method
         """
-        super().__init__(trainloader, valloader, model, loss_type, num_classes, linear_layer)
+        super().__init__(trainloader, valloader, model, num_classes, linear_layer)
+        self.loss_type = loss_type
         self.eta = eta  # step size for the one step gradient update
         self.device = device
         self.init_out = list()

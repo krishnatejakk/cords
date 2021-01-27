@@ -170,7 +170,7 @@ def train_model(num_epochs, dataset_name, datadir, feature, model_name, fraction
                                           False, lam=0, eps=1e-100)
     elif strategy == 'GLISTER':
         # GLISTER Selection strategy
-        setf_model = GLISTERStrategy(trainloader, valloader, model1, 'SquaredLoss',
+        setf_model = GLISTERStrategy(trainloader, valloader, model1, criterion,
                                      learning_rate, device, num_cls, False, 'Stochastic', r=int(bud))
 
     elif strategy == 'CRAIG':
@@ -196,7 +196,7 @@ def train_model(num_epochs, dataset_name, datadir, feature, model_name, fraction
 
     elif strategy == 'GLISTER-Explore':
         # GLISTER Selection strategy
-        setf_model = GLISTERStrategy(trainloader, valloader, model1, 'SquaredLoss',
+        setf_model = GLISTERStrategy(trainloader, valloader, model1, criterion,
                                      learning_rate, device, num_cls, False, 'Stochastic', r=int(bud))
         # Random-Online Selection strategy
         rand_setf_model = RandomStrategy(trainloader, online=True)
