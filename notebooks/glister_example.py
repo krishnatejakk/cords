@@ -399,10 +399,10 @@ def train_model(num_epochs, dataset_name, datadir, feature, model_name, fraction
 """#Training Arguments"""
 
 datadir = '../../data'
-data_name = 'cifar100'
-fraction = float(0.05)
-num_epochs = int(300)
-select_every = int(5)
+data_name = 'imagenet'
+fraction = float(0.1)
+num_epochs = int(350)
+select_every = int(20)
 feature = 'dss'
 num_runs = 1  # number of random runs
 learning_rate = 0.01
@@ -418,18 +418,18 @@ for run in range(num_runs):
     # train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'CRAIGPB-Explore')
     # train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'CRAIG')
     # train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'CRAIG-Explore')
-    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
-                'GLISTER-Explore')
-    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
-                'GradMatch-Explore')
-    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
-                'GradMatchPB-Explore')
-    # train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'Random')
-    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
-                'GLISTER')
-    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
-                'GradMatch')
-    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
-                'GradMatchPB')
+    #train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
+    #            'GLISTER-Explore')
+    #train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
+    #            'GradMatch-Explore')
+    #train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
+    #            'GradMatchPB-Explore')
+    train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'Random')
+    #train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
+    #            'GLISTER')
+    #train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
+    #            'GradMatch')
+    #train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device,
+    #            'GradMatchPB')
     # train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'Random-Online')
     # train_model(num_epochs, data_name, datadir, feature, model_name, fraction, select_every, learning_rate, run, device, 'Full')
